@@ -20,9 +20,9 @@ import net.gmcc.dg.common.utils.SpringUtils;
 public class PDPTranslator {
 
     /**
-     * 解析器
+     * 启动参数
      */
-    private Translator translator;
+    private Object parameter;
 
     /**
      * 预定义参数的标识字符
@@ -38,12 +38,29 @@ public class PDPTranslator {
 
     }
 
-    public static PDPTranslator getInstance() {
+    /**
+     *  带启动参数的构造函数
+     *  如果在解析的过程中需要一些运行时的状态，可以通过这个方法穿递
+     *  并将parameter.toString()附加在普通参数的后面，格式如下：
+     *  普通参数 或者 启动参数 或者 普通参数partitionSymbol启动参数
+     * @param parameter 启动参数
+     * @return:
+     * @author: JQY
+     * @date: 2019/6/17 8:31
+     */
+    private PDPTranslator(Object parameter) {
+        this.parameter=parameter;
+    }
+
+    private static void initialize(){
         Environment springEnv = SpringUtils.getBean(StandardEnvironment.class);
         // 读取配置文件
         PDPTranslator.identificationString = springEnv.getProperty("basedata.predefinedParameter.identificationString");
         PDPTranslator.partitionSymbol = springEnv.getProperty("basedata.predefinedParameter.partitionSymbol");
+    }
 
+    public static PDPTranslator getInstance() {
+        initialize();
         if (null == PDPTranslator.identificationString || "".equals(PDPTranslator.identificationString)) {
             return null;
         }
@@ -51,6 +68,17 @@ public class PDPTranslator {
             return null;
         }
         return new PDPTranslator();
+    }
+
+    public static PDPTranslator getInstance(Object parameter) {
+        initialize();
+        if (null == PDPTranslator.identificationString || "".equals(PDPTranslator.identificationString)) {
+            return null;
+        }
+        if (null == PDPTranslator.partitionSymbol) {
+            return null;
+        }
+        return new PDPTranslator(parameter);
     }
 
     /**
@@ -84,7 +112,14 @@ public class PDPTranslator {
             if (null != detailParams && detailParams.length == 3) {
                 String predefinedParameterType = detailParams[0];
                 String predefinedParameter = detailParams[1];
-                String params = detailParams[2];
+                String params="";
+                if (this.parameter==null){
+                    params=detailParams[2];
+                }else if ("".equals(detailParams[2])){
+                    params=this.parameter.toString();
+                }else {
+                    params=detailParams[2]+PDPTranslator.partitionSymbol+this.parameter.toString();
+                }
                 int isLegal=-1;
                 for (PredefinedParameterType parameterType:PredefinedParameterType.values()) {
                     if (parameterType.name().equals(predefinedParameterType)){
